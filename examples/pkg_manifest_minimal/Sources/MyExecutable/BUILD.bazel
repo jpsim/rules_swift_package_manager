@@ -9,5 +9,7 @@ swift_binary(
         "//Sources/MyLibrary",
         "@swiftpkg_my_local_package//:Sources_GreetingsFramework",
         "@swiftpkg_swift_argument_parser//:Sources_ArgumentParser",
+        "@swiftpkg_soto//:Sources_Soto_Services_CloudFront_SotoCloudFront",
+        "@swiftpkg_soto//:Sources_Soto_SotoS3",
     ],
 )
