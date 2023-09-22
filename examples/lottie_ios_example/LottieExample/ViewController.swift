@@ -3,6 +3,7 @@
 
 import UIKit
 import Lottie
+import Sentry
 
 class ViewController: UIViewController {
 

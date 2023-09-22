@@ -1,6 +1,7 @@
 {
   "direct_dep_identities": [
-    "lottie-spm"
+    "lottie-spm",
+    "sentry-cocoa"
   ],
   "modules": [
     {
@@ -22,6 +23,51 @@
       "product_memberships": [
         "Lottie"
       ]
+    },
+    {
+      "name": "Sentry",
+      "c99name": "Sentry",
+      "src_type": "objc",
+      "label": "@swiftpkg_sentry_cocoa//:Sources_Sentry",
+      "package_identity": "sentry-cocoa",
+      "product_memberships": [
+        "Sentry",
+        "Sentry-Dynamic",
+        "SentrySwiftUI"
+      ]
+    },
+    {
+      "name": "SentryInternal",
+      "c99name": "SentryInternal",
+      "src_type": "objc",
+      "label": "@swiftpkg_sentry_cocoa//:Sources_SentryInternal",
+      "package_identity": "sentry-cocoa",
+      "product_memberships": [
+        "SentrySwiftUI"
+      ]
+    },
+    {
+      "name": "SentryPrivate",
+      "c99name": "SentryPrivate",
+      "src_type": "swift",
+      "label": "@swiftpkg_sentry_cocoa//:Sources_SentryPrivate",
+      "modulemap_label": "@swiftpkg_sentry_cocoa//:Sources_SentryPrivate_modulemap",
+      "package_identity": "sentry-cocoa",
+      "product_memberships": [
+        "Sentry",
+        "Sentry-Dynamic",
+        "SentrySwiftUI"
+      ]
+    },
+    {
+      "name": "SentrySwiftUI",
+      "c99name": "SentrySwiftUI",
+      "src_type": "swift",
+      "label": "@swiftpkg_sentry_cocoa//:Sources_SentrySwiftUI",
+      "package_identity": "sentry-cocoa",
+      "product_memberships": [
+        "SentrySwiftUI"
+      ]
     }
   ],
   "products": [
@@ -33,6 +79,30 @@
         "@swiftpkg_lottie_spm//:remote_archive_Lottie.xcframework.zip_Lottie",
         "@swiftpkg_lottie_spm//:Sources__LottieStub"
       ]
+    },
+    {
+      "identity": "sentry-cocoa",
+      "name": "Sentry",
+      "type": "library",
+      "target_labels": [
+        "@swiftpkg_sentry_cocoa//:Sources_Sentry"
+      ]
+    },
+    {
+      "identity": "sentry-cocoa",
+      "name": "Sentry-Dynamic",
+      "type": "library",
+      "target_labels": [
+        "@swiftpkg_sentry_cocoa//:Sources_Sentry"
+      ]
+    },
+    {
+      "identity": "sentry-cocoa",
+      "name": "SentrySwiftUI",
+      "type": "library",
+      "target_labels": [
+        "@swiftpkg_sentry_cocoa//:Sources_SentrySwiftUI"
+      ]
     }
   ],
   "packages": [
@@ -43,6 +113,15 @@
         "commit": "2ae19d3c4f1603b45e551e6bebf02f523ca22a2e",
         "remote": "https://github.com/airbnb/lottie-spm",
         "version": "4.3.0"
+      }
+    },
+    {
+      "name": "swiftpkg_sentry_cocoa",
+      "identity": "sentry-cocoa",
+      "remote": {
+        "commit": "14aa6e47b03b820fd2b338728637570b9e969994",
+        "remote": "https://github.com/getsentry/sentry-cocoa",
+        "version": "8.12.0"
       }
     }
   ]

@@ -42,5 +42,6 @@ swift_deps.from_file(
 use_repo(
     swift_deps,
     "swiftpkg_lottie_spm",
+    "swiftpkg_sentry_cocoa",
 )
 # swift_deps END
