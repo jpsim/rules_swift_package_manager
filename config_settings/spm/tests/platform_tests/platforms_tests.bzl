@@ -49,9 +49,28 @@ def _supported_test(ctx):
 
 supported_test = unittest.make(_supported_test)
 
+def _label_test(ctx):
+    env = unittest.begin(ctx)
+
+    tests = [
+        struct(
+            msg = "visionOS normalizes to Bazel platform name",
+            name = "visionOS",
+            exp = "@rules_swift_package_manager//config_settings/spm/platform:visionos",
+        ),
+    ]
+    for t in tests:
+        actual = platforms.label(t.name)
+        asserts.equals(env, t.exp, actual, t.msg)
+
+    return unittest.end(env)
+
+label_test = unittest.make(_label_test)
+
 def platforms_test_suite(name = "platforms_tests"):
     return unittest.suite(
         name,
         is_supported_test,
+        label_test,
         supported_test,
     )

@@ -6,6 +6,10 @@ load(
     "//config_settings/bazel/compilation_mode:compilation_modes.bzl",
     bazel_compilation_modes = "compilation_modes",
 )
+load(
+    "//config_settings/spm/platform:platforms.bzl",
+    spm_platforms = "platforms",
+)
 load(":artifact_infos.bzl", "artifact_types", "link_types")
 load(":bazel_apple_platforms.bzl", "bazel_apple_platforms")
 load(":build_decls.bzl", "build_decls")
@@ -17,6 +21,14 @@ load(":pkginfo_targets.bzl", "pkginfo_targets")
 load(":pkginfos.bzl", "build_setting_kinds", "module_types", "pkginfos", "target_types")
 load(":semver.bzl", "semver")
 load(":starlark_codegen.bzl", scg = "starlark_codegen")
+
+_APPLE_PLATFORM_DEFAULT_MINIMUM_OS_VERSIONS = [
+    (spm_platforms.ios, "12.0"),
+    (spm_platforms.macos, "10.13"),
+    (spm_platforms.tvos, "12.0"),
+    (spm_platforms.visionos, "1.0"),
+    (spm_platforms.watchos, "4.0"),
+]
 
 # MARK: - Target Entry Point
 
@@ -218,7 +230,7 @@ def _swift_target_build_file(repository_ctx, pkg_ctx, target):
 
     if is_library_target:
         load_stmts = [swift_library_load_stmt]
-        decls = [_swift_library_from_target(target, attrs)]
+        decls = [_swift_library_from_target(pkg_ctx, target, attrs)]
     elif target.type == target_types.executable:
         load_stmts = [swift_binary_load_stmt]
         decls = [_swift_binary_from_target(target, attrs)]
@@ -227,7 +239,7 @@ def _swift_target_build_file(repository_ctx, pkg_ctx, target):
         decls = [_swift_test_from_target(target, attrs)]
     elif target.type == target_types.macro:
         load_stmts = [swift_compiler_plugin_load_stmt]
-        decls = [_swift_compiler_plugin_from_target(target, attrs)]
+        decls = [_swift_compiler_plugin_from_target(pkg_ctx, target, attrs)]
     else:
         fail("Unrecognized target type for a Swift target. type:", target.type)
     all_build_files.append(build_files.new(
@@ -237,7 +249,7 @@ def _swift_target_build_file(repository_ctx, pkg_ctx, target):
 
     return build_files.merge(*all_build_files)
 
-def _swift_library_from_target(target, attrs):
+def _swift_library_from_target(pkg_ctx, target, attrs):
     # Mark swift_library targets as manual. We do this so that they are always
     # built from a leaf node which can provide critical configuration
     # information.
@@ -250,6 +262,8 @@ def _swift_library_from_target(target, attrs):
     # To mimic SPM behavior we always link the library. This will become the
     # default in rules_swift 3.0, and we can remove it then.
     attrs["alwayslink"] = True
+
+    attrs["minimum_os_version"] = _minimum_os_version(pkg_ctx.pkg_info)
 
     return build_decls.new(
         kind = swift_kinds.library,
@@ -271,15 +285,42 @@ def _swift_test_from_target(target, attrs):
         attrs = attrs,
     )
 
-def _swift_compiler_plugin_from_target(target, attrs):
+def _swift_compiler_plugin_from_target(pkg_ctx, target, attrs):
     # Macros are set up as compiler plugins. We expose macro products as an
     # alias to the swift_compiler_plugin target.
     attrs["visibility"] = ["//visibility:public"]
+    attrs["minimum_os_version"] = _minimum_os_version(pkg_ctx.pkg_info)
     return build_decls.new(
         kind = swift_kinds.compiler_plugin,
         name = pkginfo_targets.bazel_label_name(target),
         attrs = attrs,
     )
+
+def _minimum_os_version(pkg_info):
+    declared_versions_by_condition = {}
+    for platform in pkg_info.platforms:
+        if not spm_platforms.is_supported(platform.name):
+            continue
+        condition = spm_platforms.label(platform.name)
+        existing_version = declared_versions_by_condition.get(condition)
+        if existing_version != None and existing_version != platform.version:
+            fail("Conflicting minimum OS versions for {}: {} and {}".format(
+                condition,
+                existing_version,
+                platform.version,
+            ))
+        declared_versions_by_condition[condition] = platform.version
+
+    select_dict = {}
+    for platform_name, default_minimum_os_version in _APPLE_PLATFORM_DEFAULT_MINIMUM_OS_VERSIONS:
+        condition = spm_platforms.label(platform_name)
+        select_dict[condition] = declared_versions_by_condition.get(
+            condition,
+            default_minimum_os_version,
+        )
+    select_dict[bzl_selects.default_condition] = ""
+
+    return scg.new_fn_call("select", select_dict)
 
 # MARK: - Clang Targets
 

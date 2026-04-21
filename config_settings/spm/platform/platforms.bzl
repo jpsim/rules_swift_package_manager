@@ -68,6 +68,8 @@ def _label(name):
         fail("Unsupported swift package manager platform: maccatalyst.")
     if name == "driverkit":
         name = "macos"
+    if name == "visionOS":
+        name = "visionos"
     return "@rules_swift_package_manager//config_settings/spm/platform:{}".format(name)
 
 def _is_supported(name):
@@ -81,6 +83,7 @@ platforms = struct(
     maccatalyst = "maccatalyst",
     ios = "ios",
     tvos = "tvos",
+    visionos = "visionos",
     watchos = "watchos",
     linux = "linux",
     windows = "windows",

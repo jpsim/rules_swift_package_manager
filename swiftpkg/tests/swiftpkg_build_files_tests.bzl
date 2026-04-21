@@ -31,7 +31,10 @@ load(":testutils.bzl", "testutils")
 _repo_name = "@swiftpkg_mypackage"
 
 def _pkg_info(
-        expose_build_targets = False):
+        expose_build_targets = False,
+        platforms = None):
+    if platforms == None:
+        platforms = []
     return pkginfos.new(
         name = "MyPackage",
         path = "/path/to/my-package",
@@ -187,6 +190,19 @@ def _pkg_info(
                         ),
                     ),
                 ]),
+                repo_name = _repo_name,
+                swift_src_info = pkginfos.new_swift_src_info(),
+            ),
+            pkginfos.new_target(
+                name = "MacroTarget",
+                type = "macro",
+                c99name = "MacroTarget",
+                module_type = "SwiftTarget",
+                path = "Sources/MacroTarget",
+                sources = [
+                    "MacroTarget.swift",
+                ],
+                dependencies = [],
                 repo_name = _repo_name,
                 swift_src_info = pkginfos.new_swift_src_info(),
             ),
@@ -533,6 +549,7 @@ def _pkg_info(
             ),
         ],
         expose_build_targets = expose_build_targets,
+        platforms = platforms,
     )
 
 def _pkg_info_with_traits():
@@ -606,7 +623,11 @@ def _target_generation_test(ctx):
         struct(
             msg = "Swift library target",
             name = "RegularSwiftTargetAsLibrary",
-            pkg_info = _pkg_info(),
+            pkg_info = _pkg_info(platforms = [
+                pkginfos.new_platform(name = spm_platforms.ios, version = "13.0"),
+                pkginfos.new_platform(name = spm_platforms.macos, version = "10.15"),
+                pkginfos.new_platform(name = "visionOS", version = "1.0"),
+            ]),
             exp = """\
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
@@ -619,6 +640,14 @@ swift_library(
         "-Xcc",
         "-DSWIFT_PACKAGE",
     ],
+    minimum_os_version = select({
+        "@rules_swift_package_manager//config_settings/spm/platform:ios": "13.0",
+        "@rules_swift_package_manager//config_settings/spm/platform:macos": "10.15",
+        "@rules_swift_package_manager//config_settings/spm/platform:tvos": "12.0",
+        "@rules_swift_package_manager//config_settings/spm/platform:visionos": "1.0",
+        "@rules_swift_package_manager//config_settings/spm/platform:watchos": "4.0",
+        "//conditions:default": "",
+    }),
     module_name = "RegularSwiftTargetAsLibrary",
     package_name = "MyPackage",
     srcs = ["Source/RegularSwiftTargetAsLibrary/RegularSwiftTargetAsLibrary.swift"],
@@ -647,6 +676,14 @@ swift_library(
         "-DSWIFT_PACKAGE",
     ],
     deps = ["@swiftpkg_mypackage//:RegularSwiftTargetAsLibrary.rspm"],
+    minimum_os_version = select({
+        "@rules_swift_package_manager//config_settings/spm/platform:ios": "12.0",
+        "@rules_swift_package_manager//config_settings/spm/platform:macos": "10.13",
+        "@rules_swift_package_manager//config_settings/spm/platform:tvos": "12.0",
+        "@rules_swift_package_manager//config_settings/spm/platform:visionos": "1.0",
+        "@rules_swift_package_manager//config_settings/spm/platform:watchos": "4.0",
+        "//conditions:default": "",
+    }),
     module_name = "RegularTargetForExec",
     package_name = "MyPackage",
     srcs = ["Source/RegularTargetForExec/main.swift"],
@@ -674,6 +711,35 @@ swift_test(
     package_name = "MyPackage",
     srcs = ["Tests/RegularSwiftTargetAsLibraryTests/RegularSwiftTargetAsLibraryTests.swift"],
     visibility = ["//:__subpackages__"],
+)
+""",
+        ),
+        struct(
+            msg = "Swift compiler plugin target",
+            name = "MacroTarget",
+            pkg_info = _pkg_info(),
+            exp = """\
+load("@build_bazel_rules_swift//swift:swift.bzl", "swift_compiler_plugin")
+
+swift_compiler_plugin(
+    name = "MacroTarget.rspm",
+    copts = [
+        "-DSWIFT_PACKAGE",
+        "-Xcc",
+        "-DSWIFT_PACKAGE",
+    ],
+    minimum_os_version = select({
+        "@rules_swift_package_manager//config_settings/spm/platform:ios": "12.0",
+        "@rules_swift_package_manager//config_settings/spm/platform:macos": "10.13",
+        "@rules_swift_package_manager//config_settings/spm/platform:tvos": "12.0",
+        "@rules_swift_package_manager//config_settings/spm/platform:visionos": "1.0",
+        "@rules_swift_package_manager//config_settings/spm/platform:watchos": "4.0",
+        "//conditions:default": "",
+    }),
+    module_name = "MacroTarget",
+    package_name = "MyPackage",
+    srcs = ["Sources/MacroTarget/MacroTarget.swift"],
+    visibility = ["//visibility:public"],
 )
 """,
         ),
@@ -940,6 +1006,14 @@ swift_library(
         "@rules_swift_package_manager//config_settings/spm/platform:tvos": ["@swiftpkg_mypackage//:RegularSwiftTargetAsLibrary.rspm"],
         "//conditions:default": [],
     }),
+    minimum_os_version = select({
+        "@rules_swift_package_manager//config_settings/spm/platform:ios": "12.0",
+        "@rules_swift_package_manager//config_settings/spm/platform:macos": "10.13",
+        "@rules_swift_package_manager//config_settings/spm/platform:tvos": "12.0",
+        "@rules_swift_package_manager//config_settings/spm/platform:visionos": "1.0",
+        "@rules_swift_package_manager//config_settings/spm/platform:watchos": "4.0",
+        "//conditions:default": "",
+    }),
     module_name = "SwiftLibraryWithConditionalDep",
     package_name = "MyPackage",
     srcs = ["Source/SwiftLibraryWithConditionalDep/SwiftLibraryWithConditionalDep.swift"],
@@ -1030,6 +1104,14 @@ swift_library(
     deps = ["@swiftpkg_mypackage//:ObjcLibraryDep.rspm"],
     features = ["swift.propagate_generated_module_map"],
     generates_header = True,
+    minimum_os_version = select({
+        "@rules_swift_package_manager//config_settings/spm/platform:ios": "12.0",
+        "@rules_swift_package_manager//config_settings/spm/platform:macos": "10.13",
+        "@rules_swift_package_manager//config_settings/spm/platform:tvos": "12.0",
+        "@rules_swift_package_manager//config_settings/spm/platform:visionos": "1.0",
+        "@rules_swift_package_manager//config_settings/spm/platform:watchos": "4.0",
+        "//conditions:default": "",
+    }),
     module_name = "SwiftForObjcTarget",
     package_name = "MyPackage",
     srcs = ["Source/SwiftForObjcTarget/SwiftForObjcTarget.swift"],
@@ -1075,6 +1157,14 @@ swift_library(
         "-DSWIFT_PACKAGE",
     ],
     data = [":SwiftLibraryWithFilePathResource.rspm_resource_bundle"],
+    minimum_os_version = select({
+        "@rules_swift_package_manager//config_settings/spm/platform:ios": "12.0",
+        "@rules_swift_package_manager//config_settings/spm/platform:macos": "10.13",
+        "@rules_swift_package_manager//config_settings/spm/platform:tvos": "12.0",
+        "@rules_swift_package_manager//config_settings/spm/platform:visionos": "1.0",
+        "@rules_swift_package_manager//config_settings/spm/platform:watchos": "4.0",
+        "//conditions:default": "",
+    }),
     module_name = "SwiftLibraryWithFilePathResource",
     package_name = "MyPackage",
     srcs = [
@@ -1131,6 +1221,14 @@ swift_library(
         "-DSWIFT_PACKAGE",
     ],
     data = [":SwiftLibraryWithPrecompiledBundleResource.rspm_resource_bundle"],
+    minimum_os_version = select({
+        "@rules_swift_package_manager//config_settings/spm/platform:ios": "12.0",
+        "@rules_swift_package_manager//config_settings/spm/platform:macos": "10.13",
+        "@rules_swift_package_manager//config_settings/spm/platform:tvos": "12.0",
+        "@rules_swift_package_manager//config_settings/spm/platform:visionos": "1.0",
+        "@rules_swift_package_manager//config_settings/spm/platform:watchos": "4.0",
+        "//conditions:default": "",
+    }),
     module_name = "SwiftLibraryWithPrecompiledBundleResource",
     package_name = "MyPackage",
     srcs = [
@@ -1293,6 +1391,14 @@ swift_library(
         "-Xcc",
         "-DSWIFT_PACKAGE",
     ],
+    minimum_os_version = select({
+        "@rules_swift_package_manager//config_settings/spm/platform:ios": "12.0",
+        "@rules_swift_package_manager//config_settings/spm/platform:macos": "10.13",
+        "@rules_swift_package_manager//config_settings/spm/platform:tvos": "12.0",
+        "@rules_swift_package_manager//config_settings/spm/platform:visionos": "1.0",
+        "@rules_swift_package_manager//config_settings/spm/platform:watchos": "4.0",
+        "//conditions:default": "",
+    }),
     module_name = "RegularSwiftTargetAsLibrary",
     package_name = "MyPackage",
     srcs = ["Source/RegularSwiftTargetAsLibrary/RegularSwiftTargetAsLibrary.swift"],
@@ -1319,6 +1425,14 @@ swift_library(
         "-Xcc",
         "-DSWIFT_PACKAGE",
     ],
+    minimum_os_version = select({
+        "@rules_swift_package_manager//config_settings/spm/platform:ios": "12.0",
+        "@rules_swift_package_manager//config_settings/spm/platform:macos": "10.13",
+        "@rules_swift_package_manager//config_settings/spm/platform:tvos": "12.0",
+        "@rules_swift_package_manager//config_settings/spm/platform:visionos": "1.0",
+        "@rules_swift_package_manager//config_settings/spm/platform:watchos": "4.0",
+        "//conditions:default": "",
+    }),
     module_name = "RegularSwiftTargetAsLibrary",
     package_name = "MyPackage",
     srcs = ["Source/RegularSwiftTargetAsLibrary/RegularSwiftTargetAsLibrary.swift"],
@@ -1350,6 +1464,14 @@ swift_library(
         "-DFeatureB",
         "-DUNCONDITIONAL_DEFINE",
     ],
+    minimum_os_version = select({
+        "@rules_swift_package_manager//config_settings/spm/platform:ios": "12.0",
+        "@rules_swift_package_manager//config_settings/spm/platform:macos": "10.13",
+        "@rules_swift_package_manager//config_settings/spm/platform:tvos": "12.0",
+        "@rules_swift_package_manager//config_settings/spm/platform:visionos": "1.0",
+        "@rules_swift_package_manager//config_settings/spm/platform:watchos": "4.0",
+        "//conditions:default": "",
+    }),
     module_name = "TraitLibrary",
     package_name = "TraitPackage",
     srcs = ["Sources/TraitLibrary/TraitLibrary.swift"],
